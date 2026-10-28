@@ -1,0 +1,35 @@
+---
+description: ICEHOTT AI OS V2 greenfield architecture, phased development and safety
+alwaysApply: true
+---
+
+# ICEHOTT AI OS V2 — project engineering rules
+
+This is a NEW clean project at C:\Users\Flori\ICEHOTT-AI-OS-V2. The historical
+ICEHOTT-Phase8 workspace and the GitHub ICEHOTT-AI-Workspace repository are
+reference-only. Do not apply or transplant old migrations, run old agents,
+force-push, overwrite their files, or call the new project Phase 8.
+
+READ docs/MASTER_PLAN.md and docs/ADR-0001-GREENFIELD-RESTART.md before each task.
+Start with Phase 0 completion, then Phase 1 identity and isolation. Each phase
+requires implementation, tests, docs, a clear validation result and a scoped PR.
+
+Architecture: Next.js web in apps/web; ASP.NET Core 9 server-authoritative API
+and clean layered design in services/api; FastAPI in services/ai; local Docker
+Compose PostgreSQL/pgvector and Redis in infra.
+
+Security:
+- Tenant authorization is API-enforced. Slugs, workspace headers, model output,
+  browser payloads and incoming webhooks cannot authorize subscriptions.
+- Do not create live billing, Stripe activation, live provider calls, secret
+  ingestion, production deployment, destructive migrations or paid automation.
+- No .env files, tokens, or private customer content in version control.
+- Default deny tools and external AI requests until explicitly authorized.
+- Work in focused branches and do not merge without passing CI and owner-approved
+  release policy. Keep the new repository independent of the old one.
+
+Validation: dotnet test ICEHOTT.AIOS.sln --configuration Release;
+npm run test && npm run lint && npm run build in apps/web;
+python -m pytest -q in services/ai isolated venv;
+Docker Compose config validation.
+Never call a phase complete based only on files existing.

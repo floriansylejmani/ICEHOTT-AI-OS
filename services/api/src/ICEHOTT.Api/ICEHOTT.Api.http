@@ -1,0 +1,11 @@
+@ICEHOTT_Api_BaseUrl = http://localhost:5035
+
+GET {{ICEHOTT_Api_BaseUrl}}/health/live
+Accept: application/json
+
+###
+
+GET {{ICEHOTT_Api_BaseUrl}}/api/system
+Accept: application/json
+
+###
