@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\ICEHOTT.Domain\ICEHOTT.Domain.csproj" />
     <ProjectReference Include="..\..\src\ICEHOTT.Application\ICEHOTT.Application.csproj" />
     <ProjectReference Include="..\..\src\ICEHOTT.Api\ICEHOTT.Api.csproj" />
+    <ProjectReference Include="..\..\src\ICEHOTT.Infrastructure\ICEHOTT.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
