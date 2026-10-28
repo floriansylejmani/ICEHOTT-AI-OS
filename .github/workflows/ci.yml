@@ -8,6 +8,22 @@ permissions:
 jobs:
   api:
     runs-on: ubuntu-latest
+    env:
+      ICEHOTT_POSTGRES_TEST_CONNECTION: 'Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres'
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd 'pg_isready -U postgres -d postgres'
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4

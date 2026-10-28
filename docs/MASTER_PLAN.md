@@ -40,8 +40,14 @@ Each Phase has a concrete acceptance gate. Keep scope bounded, create test evide
 - [x] Fresh .NET restore/build and xUnit green (13 tests after template cleanup).
 - [x] FastAPI dependencies installed in isolated venv; pytest green (2 tests, one dependency deprecation warning).
 - [x] Docker Compose development config validation green.
-- [ ] New V2 GitHub remote established and CI green.
-The checkboxes above are refreshed only when verification has actually happened. Phase 0 is **not** declared complete on file creation alone.
+- [x] New V2 GitHub remote established and CI green (ICEHOTT-AI-OS, PR #1 merged; main run 40785933505).
+The checkboxes above were verified in local builds and GitHub Actions. **Phase 0 is complete as a development foundation only**; the product is not deployed or production-ready.
+
+## Phase 1 implementation progress
+- [x] Phase 1A: PostgreSQL identity/users, workspace and membership schema; role-based actor-scoped internal access; atomic workspace ownership; EF migration and real-PostgreSQL integration tests (see docs/PHASE1_IDENTITY_TENANCY_FOUNDATION.md).
+- [ ] Phase 1B: password-hashed accounts, validated JWT/session authentication, refresh rotation, logout and abuse prevention.
+- [ ] Phase 1C: authenticated workspace APIs, invitations, role mutations, cross-tenant negative e2e tests and last-owner safety.
+- [ ] Phase 1 security acceptance and staged launch review.
 
 ## Rules for every phase
 1. Protect data/credentials. No .env, tokens, live Stripe or provider keys in git.
