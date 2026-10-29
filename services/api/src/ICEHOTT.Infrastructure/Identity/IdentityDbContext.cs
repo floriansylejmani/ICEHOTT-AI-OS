@@ -17,6 +17,9 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
     public DbSet<WorkspaceInvitation> Invitations => Set<WorkspaceInvitation>();
     public DbSet<IdentityAuditEvent> AuditEvents => Set<IdentityAuditEvent>();
     public DbSet<WorkspaceProject> Projects => Set<WorkspaceProject>();
+    public DbSet<AiConversation> AiConversations => Set<AiConversation>();
+    public DbSet<AiMessage> AiMessages => Set<AiMessage>();
+    public DbSet<AiAttempt> AiAttempts => Set<AiAttempt>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,6 +63,70 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
             e.HasIndex(x => x.UserId).HasDatabaseName("ix_memberships_user_id");
             e.HasOne<WorkspaceRecord>().WithMany().HasForeignKey(x => x.WorkspaceId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<UserAccount>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<AiConversation>(e =>
+        {
+            e.ToTable("ai_conversations", t => t.HasCheckConstraint(
+                "ck_ai_conv_title", "length(trim(title)) BETWEEN 1 AND 100"));
+            e.HasKey(x => x.Id);
+            e.HasAlternateKey(x => new { x.WorkspaceId, x.Id });
+            e.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
+            e.Property(x => x.WorkspaceId).HasColumnName("workspace_id");
+            e.Property(x => x.Title).HasColumnName("title").HasMaxLength(100).IsRequired();
+            e.Property(x => x.CreatedByUserId).HasColumnName("created_by_user_id");
+            e.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc");
+            e.Property(x => x.UpdatedAtUtc).HasColumnName("updated_at_utc");
+            e.HasIndex(x => new { x.WorkspaceId, x.UpdatedAtUtc }).HasDatabaseName("ix_ai_conv_workspace");
+            e.HasOne<WorkspaceRecord>().WithMany().HasForeignKey(x => x.WorkspaceId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<UserAccount>().WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<AiMessage>(e =>
+        {
+            e.ToTable("ai_messages", t =>
+            {
+                t.HasCheckConstraint("ck_ai_msg_role", "role IN (1, 2)");
+                t.HasCheckConstraint("ck_ai_msg_size", "length(content) BETWEEN 1 AND 4096");
+            });
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
+            e.Property(x => x.WorkspaceId).HasColumnName("workspace_id");
+            e.Property(x => x.ConversationId).HasColumnName("conversation_id");
+            e.Property(x => x.Role).HasColumnName("role").HasConversion<short>();
+            e.Property(x => x.Content).HasColumnName("content").HasMaxLength(4096).IsRequired();
+            e.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc");
+            e.HasIndex(x => new { x.WorkspaceId, x.ConversationId, x.CreatedAtUtc })
+                .HasDatabaseName("ix_ai_messages_conversation");
+            e.HasOne<AiConversation>().WithMany().HasForeignKey(x => new { x.WorkspaceId, x.ConversationId })
+                .HasPrincipalKey(x => new { x.WorkspaceId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<AiAttempt>(e =>
+        {
+            e.ToTable("ai_attempts", t =>
+            {
+                t.HasCheckConstraint("ck_ai_attempt_status", "status IN (1, 2, 3)");
+                t.HasCheckConstraint("ck_ai_attempt_units",
+                    "reserved_tokens BETWEEN 1 AND 10000 AND used_tokens BETWEEN 0 AND reserved_tokens");
+            });
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
+            e.Property(x => x.WorkspaceId).HasColumnName("workspace_id");
+            e.Property(x => x.ConversationId).HasColumnName("conversation_id");
+            e.Property(x => x.ActorId).HasColumnName("actor_id");
+            e.Property(x => x.RequestId).HasColumnName("request_id");
+            e.Property(x => x.TraceId).HasColumnName("trace_id");
+            e.Property(x => x.Status).HasColumnName("status").HasConversion<short>();
+            e.Property(x => x.InputHash).HasColumnName("input_hash").HasMaxLength(64).IsRequired();
+            e.Property(x => x.ReservedTokens).HasColumnName("reserved_tokens");
+            e.Property(x => x.UsedTokens).HasColumnName("used_tokens");
+            e.Property(x => x.Provider).HasColumnName("provider").HasMaxLength(40).IsRequired();
+            e.Property(x => x.StartedAtUtc).HasColumnName("started_at_utc");
+            e.Property(x => x.FinishedAtUtc).HasColumnName("finished_at_utc");
+            e.Property(x => x.ReplyMessageId).HasColumnName("reply_message_id");
+            e.HasIndex(x => new { x.WorkspaceId, x.RequestId }).IsUnique().HasDatabaseName("ux_ai_request_workspace");
+            e.HasIndex(x => new { x.WorkspaceId, x.StartedAtUtc }).HasDatabaseName("ix_ai_usage_daily");
+            e.HasOne<AiConversation>().WithMany().HasForeignKey(x => new { x.WorkspaceId, x.ConversationId })
+                .HasPrincipalKey(x => new { x.WorkspaceId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<UserAccount>().WithMany().HasForeignKey(x => x.ActorId).OnDelete(DeleteBehavior.Restrict);
         });
         modelBuilder.Entity<WorkspaceProject>(e =>
         {

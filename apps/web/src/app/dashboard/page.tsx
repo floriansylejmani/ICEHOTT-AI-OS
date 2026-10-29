@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import AiChatPanel from "./AiChatPanel";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -9,7 +10,7 @@ import {
   type ProjectStatus,
 } from "../../lib/workspace-api";
 
-type Tab = "overview" | "projects" | "settings";
+type Tab = "overview" | "projects" | "settings" | "ai";
 const btn = "rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 disabled:opacity-40";
 const field = "mt-2 w-full rounded-xl border border-white/15 bg-[#121e2e] px-3 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300/20";
 const panel = "rounded-2xl border border-white/10 bg-[#101927] p-5 shadow-xl shadow-black/10 sm:p-7";
@@ -149,7 +150,7 @@ export default function DashboardPage() {
         </div>
         <p className="mt-8 hidden text-xs font-bold uppercase tracking-[.2em] text-slate-500 lg:block">Navigation</p>
         <nav aria-label="Workspace navigation" className="mt-4 flex gap-2 overflow-x-auto lg:flex-col">
-          {([["overview","Overview"],["projects","Projects"],["settings","Settings"]] as const).map(([id,label]) =>
+          {([["overview","Overview"],["projects","Projects"],["ai","AI Chat"],["settings","Settings"]] as const).map(([id,label]) =>
             <button key={id} type="button" aria-current={tab === id ? "page" : undefined}
               onClick={() => { setTab(id); setMessage(""); }} className={`shrink-0 rounded-xl px-4 py-3 text-left text-sm transition focus-visible:outline-2 focus-visible:outline-cyan-300 ${tab === id ? "bg-cyan-300/10 font-semibold text-cyan-200" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
               {label}
@@ -166,7 +167,7 @@ export default function DashboardPage() {
           <div>
             <p className={subtitle}>ICEHOTT / Workspace command center</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-              {tab === "overview" ? "Workspace overview" : tab === "projects" ? "Projects" : "Workspace settings"}
+              {tab === "overview" ? "Workspace overview" : tab === "projects" ? "Projects" : tab === "ai" ? "AI conversations" : "Workspace settings"}
             </h1>
             <p className="mt-2 text-sm text-slate-400">A focused space for your team, projects and progress.</p>
           </div>
@@ -277,6 +278,7 @@ export default function DashboardPage() {
               </div>
             </section>
           </div>}
+          {tab === "ai" && <AiChatPanel key={workspaceId} workspaceId={workspaceId} role={role} />}
           {tab === "settings" && <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_.85fr]">
             <section className={panel}>
               <h2 className="text-xl font-semibold">Workspace profile</h2>

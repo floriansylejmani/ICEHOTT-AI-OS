@@ -7,7 +7,8 @@ Clean standalone rebuild of ICEHOTT AI OS in GitHub repository floriansylejmani/
 - Phase 0: monorepo, .NET 9, Next.js 16, FastAPI, PostgreSQL/pgvector, Redis and CI.
 - Phase 1: authenticated verified accounts; JWT/refresh/revocation and recovery; account lockout; server-authoritative workspace roles and email invites; invite-only registration, audit and web BFF with HttpOnly cookies.
 - Phase 2: responsive /dashboard with Overview, PostgreSQL-backed project management, workspace settings, role-aware UI and typed browser API. See docs/PHASE2_WORKSPACE_UX.md.
-- Future: Phase 3 AI, Phase 4 RAG, Phase 5 tools, Phase 6 workflows, Phase 7 artifacts, Phase 8 SaaS, Phase 9 optional Stripe and Phase 10–12 release readiness.
+- Phase 3: secure AI Core with workspace-scoped conversations, signed FastAPI provider gateway, offline demo, opt-in paid adapter, per-workspace usage reservation and audit, typed browser AI chat. See docs/PHASE3_AI_CORE.md.
+- Future: Phase 4 RAG, Phase 5 tools, Phase 6 workflows, Phase 7 artifacts, Phase 8 SaaS, Phase 9 optional Stripe and Phase 10–12 release readiness.
 
 See docs/MASTER_PLAN.md and docs/PHASE1_IDENTITY_COMPLETE.md. **No live billing, hosted public registration, or production deploy.**
 
@@ -15,9 +16,10 @@ See docs/MASTER_PLAN.md and docs/PHASE1_IDENTITY_COMPLETE.md. **No live billing,
 
 - apps/web — Next 16 / React 19 and server-side session BFF.
 - services/api — ASP.NET Core 9 API / Domain / Application / Infrastructure; EF migrations + real PostgreSQL xUnit.
-- services/ai — FastAPI with pytest health tests.
+- services/ai — internal HMAC-authenticated FastAPI AI runtime with provider contract/evaluation tests. No paid external calls by default.
 - infra/compose.dev.yml — local PostgreSQL, Redis and Mailpit (127.0.0.1 bound).
 - scripts/phase1-local-smoke.ps1 — disposable-only HTTP + email + tenancy acceptance smoke.
+- scripts/phase3-local-smoke.ps1 — full Phase 1–3 offline end-to-end acceptance (disposable only).
 
 ## Development on Windows PowerShell
 

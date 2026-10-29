@@ -22,6 +22,171 @@ namespace ICEHOTT.Infrastructure.Migrations.Identity
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ICEHOTT.Domain.AiAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_id");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("conversation_id");
+
+                    b.Property<DateTimeOffset?>("FinishedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("finished_at_utc");
+
+                    b.Property<string>("InputHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("input_hash");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("provider");
+
+                    b.Property<Guid?>("ReplyMessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reply_message_id");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("request_id");
+
+                    b.Property<int>("ReservedTokens")
+                        .HasColumnType("integer")
+                        .HasColumnName("reserved_tokens");
+
+                    b.Property<DateTimeOffset>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at_utc");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TraceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trace_id");
+
+                    b.Property<int>("UsedTokens")
+                        .HasColumnType("integer")
+                        .HasColumnName("used_tokens");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workspace_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorId");
+
+                    b.HasIndex("WorkspaceId", "ConversationId");
+
+                    b.HasIndex("WorkspaceId", "RequestId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_ai_request_workspace");
+
+                    b.HasIndex("WorkspaceId", "StartedAtUtc")
+                        .HasDatabaseName("ix_ai_usage_daily");
+
+                    b.ToTable("ai_attempts", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_ai_attempt_status", "status IN (1, 2, 3)");
+
+                            t.HasCheckConstraint("ck_ai_attempt_units", "reserved_tokens BETWEEN 1 AND 10000 AND used_tokens BETWEEN 0 AND reserved_tokens");
+                        });
+                });
+
+            modelBuilder.Entity("ICEHOTT.Domain.AiConversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workspace_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("WorkspaceId", "UpdatedAtUtc")
+                        .HasDatabaseName("ix_ai_conv_workspace");
+
+                    b.ToTable("ai_conversations", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_ai_conv_title", "length(trim(title)) BETWEEN 1 AND 100");
+                        });
+                });
+
+            modelBuilder.Entity("ICEHOTT.Domain.AiMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)")
+                        .HasColumnName("content");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("conversation_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<short>("Role")
+                        .HasColumnType("smallint")
+                        .HasColumnName("role");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workspace_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId", "ConversationId", "CreatedAtUtc")
+                        .HasDatabaseName("ix_ai_messages_conversation");
+
+                    b.ToTable("ai_messages", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_ai_msg_role", "role IN (1, 2)");
+
+                            t.HasCheckConstraint("ck_ai_msg_size", "length(content) BETWEEN 1 AND 4096");
+                        });
+                });
+
             modelBuilder.Entity("ICEHOTT.Domain.EmailActionToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -373,6 +538,47 @@ namespace ICEHOTT.Infrastructure.Migrations.Identity
                         {
                             t.HasCheckConstraint("ck_workspaces_slug", "length(slug) BETWEEN 3 AND 48 AND slug ~ '^[a-z0-9]([a-z0-9-]*[a-z0-9])?$'");
                         });
+                });
+
+            modelBuilder.Entity("ICEHOTT.Domain.AiAttempt", b =>
+                {
+                    b.HasOne("ICEHOTT.Domain.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("ActorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ICEHOTT.Domain.AiConversation", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "ConversationId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ICEHOTT.Domain.AiConversation", b =>
+                {
+                    b.HasOne("ICEHOTT.Domain.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ICEHOTT.Domain.WorkspaceRecord", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ICEHOTT.Domain.AiMessage", b =>
+                {
+                    b.HasOne("ICEHOTT.Domain.AiConversation", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId", "ConversationId")
+                        .HasPrincipalKey("WorkspaceId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ICEHOTT.Domain.EmailActionToken", b =>
