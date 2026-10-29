@@ -45,9 +45,9 @@ The checkboxes above were verified in local builds and GitHub Actions. **Phase 0
 
 ## Phase 1 implementation progress
 - [x] Phase 1A: PostgreSQL identity/users, workspace and membership schema; role-based actor-scoped internal access; atomic workspace ownership; EF migration and real-PostgreSQL integration tests (see docs/PHASE1_IDENTITY_TENANCY_FOUNDATION.md).
-- [ ] Phase 1B: password-hashed accounts, validated JWT/session authentication, refresh rotation, logout and abuse prevention.
-- [ ] Phase 1C: authenticated workspace APIs, invitations, role mutations, cross-tenant negative e2e tests and last-owner safety.
-- [ ] Phase 1 security acceptance and staged launch review.
+- [x] Phase 1B: verified email, PBKDF2 password hashing, JWT, refresh rotation/replay detection, logout, reset and persistent account lockout, rate limiting. See docs/PHASE1_IDENTITY_COMPLETE.md.
+- [x] Phase 1C: authenticated workspace API and browser BFF, invite-only onboarding, membership role change/removal, atomic owner transfer, audit and cross-tenant negative PostgreSQL tests.
+- [x] Phase 1 feature acceptance in isolated tests and local HTTP/Mailpit smoke: authenticated web app, real PostgreSQL migration and tenant isolation. Production staging/mail delivery/penetration review remain separate Phase 10–12 release gates. No public registration or production billing activated.
 
 ## Rules for every phase
 1. Protect data/credentials. No .env, tokens, live Stripe or provider keys in git.

@@ -43,6 +43,7 @@ export default function Home() {
             <div className="mt-9 flex flex-wrap items-center gap-4">
               <a href="#platform" className="rounded-xl bg-cyan-300 px-6 py-3 font-semibold text-slate-950 transition hover:bg-cyan-200">Explore the platform</a>
               <a href="#roadmap" className="rounded-xl border border-white/15 px-6 py-3 font-semibold text-slate-200 transition hover:border-white/40 hover:bg-white/5">View build roadmap</a>
+              <a href="/login" className="rounded-xl border border-cyan-300/30 px-6 py-3 font-semibold text-cyan-200 transition hover:bg-cyan-300/10">Sign in</a>
             </div>
             <p className="mt-6 text-xs text-slate-500">Development preview only. Authentication, AI actions and paid billing are not yet enabled.</p>
           </div>

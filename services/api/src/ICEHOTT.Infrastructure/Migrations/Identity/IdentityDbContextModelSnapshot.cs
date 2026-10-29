@@ -22,6 +22,132 @@ namespace ICEHOTT.Infrastructure.Migrations.Identity
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ICEHOTT.Domain.EmailActionToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at_utc");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("purpose");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<DateTimeOffset?>("UsedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at_utc");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("auth_email_action_tokens", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_auth_email_token_purpose", "purpose IN ('verify', 'reset')");
+                        });
+                });
+
+            modelBuilder.Entity("ICEHOTT.Domain.IdentityAuditEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("action");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<DateTimeOffset>("HappenedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("happened_at_utc");
+
+                    b.Property<Guid?>("WorkspaceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workspace_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId", "HappenedAtUtc");
+
+                    b.HasIndex("WorkspaceId", "HappenedAtUtc");
+
+                    b.ToTable("identity_audit_events", (string)null);
+                });
+
+            modelBuilder.Entity("ICEHOTT.Domain.RefreshSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at_utc");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("family_id");
+
+                    b.Property<DateTimeOffset?>("ReplacedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("replaced_at_utc");
+
+                    b.Property<DateTimeOffset?>("RevokedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at_utc");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ux_refresh_token_hash");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("FamilyId", "UserId")
+                        .HasDatabaseName("ix_refresh_family");
+
+                    b.ToTable("auth_refresh_sessions", (string)null);
+                });
+
             modelBuilder.Entity("ICEHOTT.Domain.UserAccount", b =>
                 {
                     b.Property<Guid>("Id")
@@ -32,11 +158,29 @@ namespace ICEHOTT.Infrastructure.Migrations.Identity
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at_utc");
 
+                    b.Property<DateTimeOffset?>("DisabledAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("disabled_at_utc");
+
                     b.Property<string>("EmailNormalized")
                         .IsRequired()
                         .HasMaxLength(254)
                         .HasColumnType("character varying(254)")
                         .HasColumnName("email_normalized");
+
+                    b.Property<DateTimeOffset?>("EmailVerifiedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("email_verified_at_utc");
+
+                    b.Property<int>("FailedLoginCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("failed_login_count");
+
+                    b.Property<DateTimeOffset?>("LockoutUntilUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("lockout_until_utc");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -53,6 +197,63 @@ namespace ICEHOTT.Infrastructure.Migrations.Identity
                     b.ToTable("identity_users", null, t =>
                         {
                             t.HasCheckConstraint("ck_identity_users_email_lower", "email_normalized = lower(email_normalized)");
+                        });
+                });
+
+            modelBuilder.Entity("ICEHOTT.Domain.WorkspaceInvitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("AcceptedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("accepted_at_utc");
+
+                    b.Property<string>("EmailNormalized")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email_normalized");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at_utc");
+
+                    b.Property<Guid>("InvitedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invited_by_user_id");
+
+                    b.Property<DateTimeOffset?>("RevokedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at_utc");
+
+                    b.Property<short>("Role")
+                        .HasColumnType("smallint")
+                        .HasColumnName("role");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workspace_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvitedByUserId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("WorkspaceId", "EmailNormalized");
+
+                    b.ToTable("workspace_invitations", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_workspace_invitation_role", "role IN (1, 2, 3)");
                         });
                 });
 
@@ -117,6 +318,39 @@ namespace ICEHOTT.Infrastructure.Migrations.Identity
                         {
                             t.HasCheckConstraint("ck_workspaces_slug", "length(slug) BETWEEN 3 AND 48 AND slug ~ '^[a-z0-9]([a-z0-9-]*[a-z0-9])?$'");
                         });
+                });
+
+            modelBuilder.Entity("ICEHOTT.Domain.EmailActionToken", b =>
+                {
+                    b.HasOne("ICEHOTT.Domain.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ICEHOTT.Domain.RefreshSession", b =>
+                {
+                    b.HasOne("ICEHOTT.Domain.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ICEHOTT.Domain.WorkspaceInvitation", b =>
+                {
+                    b.HasOne("ICEHOTT.Domain.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("InvitedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ICEHOTT.Domain.WorkspaceRecord", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ICEHOTT.Domain.WorkspaceMembership", b =>

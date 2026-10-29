@@ -14,6 +14,7 @@ public sealed class TenantDatabaseFixture : IAsyncLifetime
 {
     private readonly string _databaseName = "icehott_v2_tenancy_" + Guid.NewGuid().ToString("N");
     private string _connectionString = "";
+    public string ConnectionString => _connectionString;
 
     public async Task InitializeAsync()
     {
