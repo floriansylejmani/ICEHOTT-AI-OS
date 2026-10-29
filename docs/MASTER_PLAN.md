@@ -49,6 +49,13 @@ The checkboxes above were verified in local builds and GitHub Actions. **Phase 0
 - [x] Phase 1C: authenticated workspace API and browser BFF, invite-only onboarding, membership role change/removal, atomic owner transfer, audit and cross-tenant negative PostgreSQL tests.
 - [x] Phase 1 feature acceptance in isolated tests and local HTTP/Mailpit smoke: authenticated web app, real PostgreSQL migration and tenant isolation. Production staging/mail delivery/penetration review remain separate Phase 10–12 release gates. No public registration or production billing activated.
 
+## Phase 2 implementation progress
+- [x] Responsive dashboard, workspace selector and role-aware Overview / Projects / Settings / Team navigation.
+- [x] PostgreSQL workspace_projects table, EF migration, scoped list/create/edit/archive with bounded payloads and Admin-only archival.
+- [x] Workspace settings name update with Admin+ access, authoritative activity/counts, safe TypeScript BFF client and no browser token storage.
+- [x] Role-based authenticated HTTP integration tests, frontend accessibility/role tests, and real local HTTP/SMTP smoke test (see docs/PHASE2_WORKSPACE_UX.md).
+- [x] Phase 2 code acceptance; staged assistive-technology testing and live-service readiness are later release gates.
+
 ## Rules for every phase
 1. Protect data/credentials. No .env, tokens, live Stripe or provider keys in git.
 2. Every tenant-owned table requires WorkspaceId, database integrity and server-side member authorization.

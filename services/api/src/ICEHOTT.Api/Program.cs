@@ -37,6 +37,7 @@ if (auth.Enabled)
     builder.Services.AddScoped<AccountService>();
     builder.Services.AddScoped<WorkspaceAccessService>();
     builder.Services.AddScoped<WorkspaceMembershipService>();
+    builder.Services.AddScoped<WorkspaceDashboardService>();
     builder.Services.Configure<PasswordHasherOptions>(options => options.IterationCount = 210_000);
     builder.Services.AddScoped<IPasswordHasher<UserAccount>, PasswordHasher<UserAccount>>();
     builder.Services.AddScoped<IAccountEmailSender, SmtpAccountEmailSender>();
@@ -121,7 +122,7 @@ app.Use(async (ctx, next) =>
 app.MapHealthChecks("/health/live");
 app.MapGet("/api/system", () => Results.Ok(new
 {
-    product = "ICEHOTT AI OS", version = "0.2.0", phase = "Phase 1",
+    product = "ICEHOTT AI OS", version = "0.3.0", phase = "Phase 2",
     authEnabled = auth.Enabled
 }));
 
@@ -204,6 +205,34 @@ if (auth.Enabled)
     {
         var record = await service.CreateAsync(CurrentUser(actor), request.Slug, request.Name, ct);
         return Results.Created($"/api/workspaces/{record.Id}", record);
+    });
+    workspaces.MapGet("/{workspaceId:guid}/overview", (
+        ClaimsPrincipal actor, Guid workspaceId, WorkspaceDashboardService service, CancellationToken ct) =>
+        service.OverviewAsync(CurrentUser(actor), workspaceId, ct));
+    workspaces.MapPut("/{workspaceId:guid}/settings", (
+        ClaimsPrincipal actor, Guid workspaceId, WorkspaceSettingsInput input,
+        WorkspaceDashboardService service, CancellationToken ct) =>
+        service.RenameAsync(CurrentUser(actor), workspaceId, input, ct));
+    workspaces.MapGet("/{workspaceId:guid}/projects", (
+        ClaimsPrincipal actor, Guid workspaceId, WorkspaceDashboardService service, CancellationToken ct) =>
+        service.ListProjectsAsync(CurrentUser(actor), workspaceId, ct));
+    workspaces.MapPost("/{workspaceId:guid}/projects", async (
+        ClaimsPrincipal actor, Guid workspaceId, ProjectInput input,
+        WorkspaceDashboardService service, CancellationToken ct) =>
+    {
+        var project = await service.CreateProjectAsync(CurrentUser(actor), workspaceId, input, ct);
+        return Results.Created($"/api/workspaces/{workspaceId}/projects/{project.Id}", project);
+    });
+    workspaces.MapPut("/{workspaceId:guid}/projects/{projectId:guid}", (
+        ClaimsPrincipal actor, Guid workspaceId, Guid projectId, ProjectInput input,
+        WorkspaceDashboardService service, CancellationToken ct) =>
+        service.UpdateProjectAsync(CurrentUser(actor), workspaceId, projectId, input, ct));
+    workspaces.MapDelete("/{workspaceId:guid}/projects/{projectId:guid}", async (
+        ClaimsPrincipal actor, Guid workspaceId, Guid projectId,
+        WorkspaceDashboardService service, CancellationToken ct) =>
+    {
+        await service.ArchiveProjectAsync(CurrentUser(actor), workspaceId, projectId, ct);
+        return Results.NoContent();
     });
     workspaces.MapGet("/{workspaceId:guid}/members", (ClaimsPrincipal actor, Guid workspaceId,
         WorkspaceMembershipService service, CancellationToken ct) =>

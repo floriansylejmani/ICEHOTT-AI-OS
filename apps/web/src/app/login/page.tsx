@@ -24,7 +24,7 @@ export default function LoginPage() {
         setError(response.status === 401 ? "Invalid credentials or unverified email." : "Unable to sign in. Try again.");
         return;
       }
-      router.replace("/workspaces");
+      router.replace("/dashboard");
     } catch { setError("Connection unavailable. Try again."); }
     finally { setBusy(false); }
   }

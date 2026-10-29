@@ -286,6 +286,61 @@ namespace ICEHOTT.Infrastructure.Migrations.Identity
                         });
                 });
 
+            modelBuilder.Entity("ICEHOTT.Domain.WorkspaceProject", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workspace_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("WorkspaceId", "Status", "UpdatedAtUtc")
+                        .HasDatabaseName("ix_projects_workspace_status");
+
+                    b.ToTable("workspace_projects", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_projects_description", "length(description) <= 2000");
+
+                            t.HasCheckConstraint("ck_projects_name", "length(trim(name)) BETWEEN 1 AND 120");
+
+                            t.HasCheckConstraint("ck_projects_status", "status IN (1, 2, 3, 4, 5)");
+                        });
+                });
+
             modelBuilder.Entity("ICEHOTT.Domain.WorkspaceRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -358,6 +413,21 @@ namespace ICEHOTT.Infrastructure.Migrations.Identity
                     b.HasOne("ICEHOTT.Domain.UserAccount", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ICEHOTT.Domain.WorkspaceRecord", null)
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ICEHOTT.Domain.WorkspaceProject", b =>
+                {
+                    b.HasOne("ICEHOTT.Domain.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 

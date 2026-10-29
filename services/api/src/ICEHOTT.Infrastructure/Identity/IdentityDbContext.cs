@@ -16,6 +16,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
     public DbSet<EmailActionToken> EmailTokens => Set<EmailActionToken>();
     public DbSet<WorkspaceInvitation> Invitations => Set<WorkspaceInvitation>();
     public DbSet<IdentityAuditEvent> AuditEvents => Set<IdentityAuditEvent>();
+    public DbSet<WorkspaceProject> Projects => Set<WorkspaceProject>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -59,6 +60,27 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
             e.HasIndex(x => x.UserId).HasDatabaseName("ix_memberships_user_id");
             e.HasOne<WorkspaceRecord>().WithMany().HasForeignKey(x => x.WorkspaceId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<UserAccount>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<WorkspaceProject>(e =>
+        {
+            e.ToTable("workspace_projects", table =>
+            {
+                table.HasCheckConstraint("ck_projects_status", "status IN (1, 2, 3, 4, 5)");
+                table.HasCheckConstraint("ck_projects_name", "length(trim(name)) BETWEEN 1 AND 120");
+                table.HasCheckConstraint("ck_projects_description", "length(description) <= 2000");
+            });
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
+            e.Property(x => x.WorkspaceId).HasColumnName("workspace_id");
+            e.Property(x => x.Name).HasColumnName("name").HasMaxLength(120).IsRequired();
+            e.Property(x => x.Description).HasColumnName("description").HasMaxLength(2000).IsRequired();
+            e.Property(x => x.Status).HasColumnName("status").HasConversion<short>().IsRequired();
+            e.Property(x => x.CreatedByUserId).HasColumnName("created_by_user_id");
+            e.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc");
+            e.Property(x => x.UpdatedAtUtc).HasColumnName("updated_at_utc");
+            e.HasIndex(x => new { x.WorkspaceId, x.Status, x.UpdatedAtUtc }).HasDatabaseName("ix_projects_workspace_status");
+            e.HasOne<WorkspaceRecord>().WithMany().HasForeignKey(x => x.WorkspaceId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<UserAccount>().WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
         });
         modelBuilder.Entity<IdentityAuditEvent>(e =>
         {

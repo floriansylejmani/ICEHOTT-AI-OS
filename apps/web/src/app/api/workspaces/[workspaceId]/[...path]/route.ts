@@ -9,6 +9,11 @@ async function route(request: NextRequest, { params }: Params,
   const { workspaceId, path } = await params;
   if (!guid.test(workspaceId) || !Array.isArray(path)) return new NextResponse(null, { status: 404 });
   const valid =
+    (path.length === 1 && path[0] === "overview" && method === "GET") ||
+    (path.length === 1 && path[0] === "settings" && method === "PUT") ||
+    (path.length === 1 && path[0] === "projects" && (method === "GET" || method === "POST")) ||
+    (path.length === 2 && path[0] === "projects" && guid.test(path[1]) &&
+      (method === "PUT" || method === "DELETE")) ||
     (path.length === 1 && (path[0] === "members" || path[0] === "invitations") &&
       (method === "GET" || (path[0] === "invitations" && method === "POST"))) ||
     (path.length === 2 && path[0] === "invitations" && guid.test(path[1]) && method === "DELETE") ||

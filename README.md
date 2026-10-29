@@ -6,7 +6,8 @@ Clean standalone rebuild of ICEHOTT AI OS in GitHub repository floriansylejmani/
 
 - Phase 0: monorepo, .NET 9, Next.js 16, FastAPI, PostgreSQL/pgvector, Redis and CI.
 - Phase 1: authenticated verified accounts; JWT/refresh/revocation and recovery; account lockout; server-authoritative workspace roles and email invites; invite-only registration, audit and web BFF with HttpOnly cookies.
-- Future: Phase 2 UI expansion, Phase 3 AI, Phase 4 RAG, Phase 5 tools, Phase 6 workflows, Phase 7 artifacts, Phase 8 SaaS, Phase 9 optional Stripe and Phase 10–12 release readiness.
+- Phase 2: responsive /dashboard with Overview, PostgreSQL-backed project management, workspace settings, role-aware UI and typed browser API. See docs/PHASE2_WORKSPACE_UX.md.
+- Future: Phase 3 AI, Phase 4 RAG, Phase 5 tools, Phase 6 workflows, Phase 7 artifacts, Phase 8 SaaS, Phase 9 optional Stripe and Phase 10–12 release readiness.
 
 See docs/MASTER_PLAN.md and docs/PHASE1_IDENTITY_COMPLETE.md. **No live billing, hosted public registration, or production deploy.**
 
