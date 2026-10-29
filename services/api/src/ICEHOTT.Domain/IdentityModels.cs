@@ -8,6 +8,10 @@ public sealed class UserAccount
     public string EmailNormalized { get; set; } = "";
     public string PasswordHash { get; set; } = "";
     public DateTimeOffset CreatedAtUtc { get; set; }
+    public DateTimeOffset? EmailVerifiedAtUtc { get; set; }
+    public DateTimeOffset? DisabledAtUtc { get; set; }
+    public int FailedLoginCount { get; set; }
+    public DateTimeOffset? LockoutUntilUtc { get; set; }
 }
 
 public sealed class WorkspaceRecord

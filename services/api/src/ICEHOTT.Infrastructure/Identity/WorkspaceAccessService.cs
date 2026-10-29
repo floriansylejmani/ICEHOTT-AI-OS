@@ -32,6 +32,7 @@ public sealed class WorkspaceAccessService(IdentityDbContext db)
             CreatedAtUtc = DateTimeOffset.UtcNow
         };
         db.Workspaces.Add(workspace);
+        IdentityAudit.Record(db, "workspace.created", authenticatedUserId, workspace.Id);
         db.Memberships.Add(new WorkspaceMembership
         {
             WorkspaceId = workspace.Id,

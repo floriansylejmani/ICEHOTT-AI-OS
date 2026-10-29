@@ -1,47 +1,77 @@
 # ICEHOTT AI OS V2
-**A fresh professional rebuild of the ICEHOTT AI OS platform, starting at Phase 0.**
 
-This is a clean project created on 2026-10-28 in `C:\Users\Flori\ICEHOTT-AI-OS-V2`.
-The previous `ICEHOTT-Phase8` workspace and GitHub repo are preserved as a historical reference; no data was migrated or deleted.
+Clean standalone rebuild of ICEHOTT AI OS in GitHub repository floriansylejmani/ICEHOTT-AI-OS. The historical ICEHOTT-AI-Workspace remains untouched.
 
-## Structure
-- `apps/web` — Next.js 16, TypeScript, Tailwind; browser frontend.
-- `services/api/src/ICEHOTT.Api` — ASP.NET Core HTTP API, server-side authority.
-- `services/api/src/ICEHOTT.Application` — use cases and interfaces.
-- `services/api/src/ICEHOTT.Domain` — core value objects, independent of framework.
-- `services/api/src/ICEHOTT.Infrastructure` — persistence and adapters (introduced incrementally).
-- `services/api/tests` — xUnit unit/integration tests.
-- `services/ai` — FastAPI AI runtime with pytest.
-- `infra/compose.dev.yml` — local PostgreSQL/pgvector and Redis only.
-- `docs/MASTER_PLAN.md` — phases, deliverables and security acceptance criteria.
+## Project status
 
-## Local development (Windows PowerShell)
-```powershell
-Set-Location C:\Users\Flori\ICEHOTT-AI-OS-V2
+- Phase 0: monorepo, .NET 9, Next.js 16, FastAPI, PostgreSQL/pgvector, Redis and CI.
+- Phase 1: authenticated verified accounts; JWT/refresh/revocation and recovery; account lockout; server-authoritative workspace roles and email invites; invite-only registration, audit and web BFF with HttpOnly cookies.
+- Future: Phase 2 UI expansion, Phase 3 AI, Phase 4 RAG, Phase 5 tools, Phase 6 workflows, Phase 7 artifacts, Phase 8 SaaS, Phase 9 optional Stripe and Phase 10–12 release readiness.
 
-# .NET API
-dotnet restore ICEHOTT.AIOS.sln
-dotnet test ICEHOTT.AIOS.sln --configuration Release
-dotnet run --project services/api/src/ICEHOTT.Api
+See docs/MASTER_PLAN.md and docs/PHASE1_IDENTITY_COMPLETE.md. **No live billing, hosted public registration, or production deploy.**
 
-# Frontend in another terminal
-Set-Location apps/web
-npm ci
-npm run dev
+## Source tree
 
-# AI in another terminal, use isolated environment
-Set-Location services/ai
-python -m venv .venv
-.venv\Scripts\python -m pip install -r requirements.txt
-.venv\Scripts\python -m pytest -q
-.venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+- apps/web — Next 16 / React 19 and server-side session BFF.
+- services/api — ASP.NET Core 9 API / Domain / Application / Infrastructure; EF migrations + real PostgreSQL xUnit.
+- services/ai — FastAPI with pytest health tests.
+- infra/compose.dev.yml — local PostgreSQL, Redis and Mailpit (127.0.0.1 bound).
+- scripts/phase1-local-smoke.ps1 — disposable-only HTTP + email + tenancy acceptance smoke.
 
-# Optional local infrastructure from root:
-Copy-Item .env.example .env
-# EDIT .env with a strong LOCAL-only password before starting
-docker compose --env-file .env -f infra/compose.dev.yml up -d
-```
-No production API keys or billing required for Phase 0.
+## Development on Windows PowerShell
 
-## Working agreement
-Only the Phase 0 skeleton is currently being implemented. This is **not** a production-ready SaaS and does not include authorization, real AI execution, payments or database-backed tenancy. See `docs/MASTER_PLAN.md` for the full roadmap.
+From the repo root, copy .env.example to .env, choose a strong LOCAL PostgreSQL password, and run:
+  docker compose --env-file .env -f infra/compose.dev.yml up -d
+  dotnet tool restore
+  dotnet restore ICEHOTT.AIOS.sln
+
+In your API terminal, export environment variables (DO NOT store secrets in tracked files):
+  $env:ASPNETCORE_ENVIRONMENT = 'Development'
+  $env:ConnectionStrings__Identity = 'Host=127.0.0.1;Port=5434;Database=icehott_v2_dev;Username=icehott_dev;Password=REPLACE_WITH_LOCAL_POSTGRES_PASSWORD'
+  $env:Auth__Enabled = 'true'
+  $env:Auth__RegistrationEnabled = 'false'
+  $bytes = New-Object byte[] 48
+  $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+  $rng.GetBytes($bytes)
+  $rng.Dispose()
+  $env:Auth__SigningKey = [Convert]::ToBase64String($bytes)
+  $env:Auth__Issuer = 'ICEHOTT-Local-Dev'
+  $env:Auth__Audience = 'ICEHOTT-Local-Web'
+  $env:Auth__PublicBaseUrl = 'http://localhost:3000'
+  $env:Email__Smtp__Host = '127.0.0.1'
+  $env:Email__Smtp__Port = '1025'
+  $env:Email__Smtp__From = 'noreply@icehott.local'
+  $env:Email__Smtp__AllowPlaintextLocal = 'true'
+  $env:ICEHOTT_MIGRATION_CONNECTION = $env:ConnectionStrings__Identity
+
+Apply migrations ONLY to your intended local development DB:
+  dotnet tool run dotnet-ef database update --project services/api/src/ICEHOTT.Infrastructure --startup-project services/api/src/ICEHOTT.Api --context IdentityDbContext --configuration Release
+Start API:
+  dotnet run --project services/api/src/ICEHOTT.Api --urls http://127.0.0.1:5035
+
+In another terminal:
+  cd apps/web
+  $env:ICEHOTT_API_BASE_URL = 'http://127.0.0.1:5035'
+  npm ci
+  npm run dev -- -p 3000
+
+Open http://localhost:3000/login and local mail at http://127.0.0.1:8025. Public registration is OFF by default; invite-only registration works when Auth is enabled. For local public signup tests only, set Auth__RegistrationEnabled=true before API startup.
+
+## Tests
+
+Backend tests require ICEHOTT_POSTGRES_TEST_CONNECTION pointing to a disposable PostgreSQL server where a test user can CREATE DATABASE. Each test fixture migrates and drops only its uniquely named test database:
+  dotnet test ICEHOTT.AIOS.sln --configuration Release
+
+Frontend:
+  cd apps/web
+  npm run test
+  npm run lint
+  npm run build
+  npm audit --omit=dev --audit-level=low
+
+AI (inside services/ai venv): python -m pytest -q
+
+After local services are running against disposable data, run:
+  powershell -NoProfile -File scripts/phase1-local-smoke.ps1
+
+Do not run the smoke script on production data. The web interface is an initial Phase 1 shell, not the complete Phase 2 workspace UX. Production email, credentials and deployment remain subject to separate staging verification.
