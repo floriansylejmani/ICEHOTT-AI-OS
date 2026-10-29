@@ -111,7 +111,7 @@ export default function WorkspacesPage() {
   const canInvite=!!active&&active.role>=3;
   return <main className="min-h-screen bg-[#070d16] text-slate-100">
     <header className="mx-auto flex max-w-6xl items-center justify-between border-b border-white/10 px-6 py-7">
-      <Link href="/" className="text-lg font-bold text-cyan-300">ICEHOTT AI OS</Link>
+      <div className="flex items-center gap-5"><Link href="/" className="text-lg font-bold text-cyan-300">ICEHOTT AI OS</Link><Link href="/dashboard" className="text-sm text-slate-200 hover:text-cyan-200">Dashboard</Link></div>
       <button type="button" onClick={logout} className="rounded-lg border border-white/20 px-4 py-2 text-sm hover:border-white/50">Sign out</button>
     </header>
     <div className="mx-auto max-w-6xl px-6 py-12">

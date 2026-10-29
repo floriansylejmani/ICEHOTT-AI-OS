@@ -359,6 +359,147 @@ public sealed class AuthenticatedApiTests(TenantDatabaseFixture database)
         Assert.Equal(0, latest.FailedLoginCount);
     }
 
+
+    [Fact]
+    public async Task Phase2_ProjectCrud_IsTenantScopedAndRolesAreEnforced()
+    {
+        using var app = Start();
+        using var ownerClient = app.CreateClient();
+        using var memberClient = app.CreateClient();
+        using var outsiderClient = app.CreateClient();
+        var ownerEmail = UniqueEmail();
+        var viewerEmail = UniqueEmail();
+        var outsiderEmail = UniqueEmail();
+        await CreateVerifiedAsync(app, ownerClient, ownerEmail);
+        await CreateVerifiedAsync(app, memberClient, viewerEmail);
+        await CreateVerifiedAsync(app, outsiderClient, outsiderEmail);
+        SetBearer(ownerClient, await LoginAsync(ownerClient, ownerEmail, Password));
+        SetBearer(memberClient, await LoginAsync(memberClient, viewerEmail, Password));
+        SetBearer(outsiderClient, await LoginAsync(outsiderClient, outsiderEmail, Password));
+        var response = await ownerClient.PostAsJsonAsync("/api/workspaces/",
+            new CreateWorkspaceRequest("p2-" + Guid.NewGuid().ToString("N")[..15], "Phase 2 Workspace"));
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var ws = (await response.Content.ReadFromJsonAsync<WorkspaceSummary>())!;
+
+        var input = new ProjectInput("  Roadmap  ", "  Important tasks  ", ProjectStatus.Planned);
+        var create = await ownerClient.PostAsJsonAsync($"/api/workspaces/{ws.Id}/projects", input);
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        var project = (await create.Content.ReadFromJsonAsync<ProjectView>())!;
+        Assert.Equal("Roadmap", project.Name);
+        Assert.Equal("Important tasks", project.Description);
+        Assert.Equal(ws.Id, project.WorkspaceId);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await outsiderClient.GetAsync($"/api/workspaces/{ws.Id}/overview")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await outsiderClient.GetAsync($"/api/workspaces/{ws.Id}/projects")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await outsiderClient.PutAsJsonAsync($"/api/workspaces/{ws.Id}/projects/{project.Id}",
+                new ProjectInput("Stolen", "", ProjectStatus.Active))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await outsiderClient.PutAsJsonAsync($"/api/workspaces/{ws.Id}/settings",
+                new WorkspaceSettingsInput("Hacked"))).StatusCode);
+
+        Assert.Equal(HttpStatusCode.Accepted,
+            (await ownerClient.PostAsJsonAsync($"/api/workspaces/{ws.Id}/invitations",
+                new InviteWorkspaceRequest(viewerEmail, WorkspaceRole.Viewer))).StatusCode);
+        var raw = app.Mail.GetToken(viewerEmail, "accept-invite");
+        Assert.Equal(HttpStatusCode.OK,
+            (await memberClient.PostAsJsonAsync("/api/invitations/accept", new AcceptInviteRequest(raw))).StatusCode);
+        var read = await memberClient.GetFromJsonAsync<List<ProjectView>>($"/api/workspaces/{ws.Id}/projects");
+        Assert.Equal(project.Id, Assert.Single(read!).Id);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await memberClient.PostAsJsonAsync($"/api/workspaces/{ws.Id}/projects", input)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await memberClient.DeleteAsync($"/api/workspaces/{ws.Id}/projects/{project.Id}")).StatusCode);
+
+        var changed = await ownerClient.PutAsJsonAsync($"/api/workspaces/{ws.Id}/projects/{project.Id}",
+            new ProjectInput("Shipped", "Delivered", ProjectStatus.Completed));
+        Assert.Equal(HttpStatusCode.OK, changed.StatusCode);
+        var overview = (await ownerClient.GetFromJsonAsync<WorkspaceOverview>(
+            $"/api/workspaces/{ws.Id}/overview"))!;
+        Assert.Equal(2, overview.MemberCount);
+        Assert.Equal(1, overview.ProjectCount);
+        Assert.Equal(0, overview.ActiveProjects);
+        Assert.Equal(1, overview.CompletedProjects);
+        Assert.Contains(overview.RecentActivity, a => a.Action == "project.updated");
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await ownerClient.PutAsJsonAsync($"/api/workspaces/{ws.Id}/projects/{project.Id}",
+                new ProjectInput("Hidden archive", "", ProjectStatus.Archived))).StatusCode);
+
+        Assert.Equal(HttpStatusCode.NoContent,
+            (await ownerClient.DeleteAsync($"/api/workspaces/{ws.Id}/projects/{project.Id}")).StatusCode);
+        Assert.Empty((await ownerClient.GetFromJsonAsync<List<ProjectView>>(
+            $"/api/workspaces/{ws.Id}/projects"))!);
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await ownerClient.PutAsJsonAsync($"/api/workspaces/{ws.Id}/projects/{project.Id}", input)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Phase2_SettingsRequireAdmin_AndDashboardDoesNotLeakInvitesToViewer()
+    {
+        using var app = Start();
+        using var ownerClient = app.CreateClient();
+        using var viewerClient = app.CreateClient();
+        var ownerEmail = UniqueEmail();
+        var viewerEmail = UniqueEmail();
+        await CreateVerifiedAsync(app, ownerClient, ownerEmail);
+        await CreateVerifiedAsync(app, viewerClient, viewerEmail);
+        SetBearer(ownerClient, await LoginAsync(ownerClient, ownerEmail, Password));
+        SetBearer(viewerClient, await LoginAsync(viewerClient, viewerEmail, Password));
+        var created = await ownerClient.PostAsJsonAsync("/api/workspaces/",
+            new CreateWorkspaceRequest("sett-" + Guid.NewGuid().ToString("N")[..15], "Original"));
+        var ws = (await created.Content.ReadFromJsonAsync<WorkspaceSummary>())!;
+        Assert.Equal(HttpStatusCode.Accepted,
+            (await ownerClient.PostAsJsonAsync($"/api/workspaces/{ws.Id}/invitations",
+                new InviteWorkspaceRequest(viewerEmail, WorkspaceRole.Viewer))).StatusCode);
+        var raw = app.Mail.GetToken(viewerEmail, "accept-invite");
+        Assert.Equal(HttpStatusCode.OK,
+            (await viewerClient.PostAsJsonAsync("/api/invitations/accept", new AcceptInviteRequest(raw))).StatusCode);
+
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await viewerClient.PutAsJsonAsync($"/api/workspaces/{ws.Id}/settings",
+                new WorkspaceSettingsInput("Forbidden"))).StatusCode);
+        var settings = await ownerClient.PutAsJsonAsync($"/api/workspaces/{ws.Id}/settings",
+            new WorkspaceSettingsInput("  Updated Space "));
+        Assert.Equal(HttpStatusCode.OK, settings.StatusCode);
+        var summary = (await settings.Content.ReadFromJsonAsync<WorkspaceSummary>())!;
+        Assert.Equal("Updated Space", summary.DisplayName);
+        Assert.Equal(ws.Slug, summary.Slug);
+        var dashboard = (await viewerClient.GetFromJsonAsync<WorkspaceOverview>(
+            $"/api/workspaces/{ws.Id}/overview"))!;
+        Assert.Equal("Updated Space", dashboard.Name);
+        Assert.Equal(0, dashboard.PendingInvitations);
+        Assert.Contains(dashboard.RecentActivity, a => a.Action == "workspace.settings.updated");
+    }
+
+    [Fact]
+    public async Task Phase2_InvalidProjectPayloadsAndMissingWorkspaceAreRejected()
+    {
+        using var app = Start();
+        using var client = app.CreateClient();
+        var email = UniqueEmail();
+        await CreateVerifiedAsync(app, client, email);
+        SetBearer(client, await LoginAsync(client, email, Password));
+        var created = await client.PostAsJsonAsync("/api/workspaces/",
+            new CreateWorkspaceRequest("valid-" + Guid.NewGuid().ToString("N")[..15], "Valid"));
+        var workspace = (await created.Content.ReadFromJsonAsync<WorkspaceSummary>())!;
+        foreach (var input in new[] {
+            new ProjectInput(" ", "", ProjectStatus.Planned),
+            new ProjectInput(new string('x',121), "", ProjectStatus.Planned),
+            new ProjectInput("Valid",new string('x',2001), ProjectStatus.Planned),
+            new ProjectInput("Valid","", (ProjectStatus)99),
+            new ProjectInput("Archived","",ProjectStatus.Archived)
+        })
+        {
+            Assert.Equal(HttpStatusCode.BadRequest,
+                (await client.PostAsJsonAsync($"/api/workspaces/{workspace.Id}/projects", input)).StatusCode);
+        }
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await client.GetAsync($"/api/workspaces/{Guid.NewGuid()}/projects")).StatusCode);
+        Assert.Empty((await client.GetFromJsonAsync<List<ProjectView>>(
+            $"/api/workspaces/{workspace.Id}/projects"))!);
+    }
+
     private const string Password = "Good Secure Pass 99112";
     private static string UniqueEmail() => $"{Guid.NewGuid():N}@example.invalid";
 
