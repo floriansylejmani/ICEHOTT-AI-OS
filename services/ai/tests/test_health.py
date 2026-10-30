@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import os
+import asyncio
 import time
 from uuid import uuid4
 
@@ -84,8 +85,11 @@ def test_paid_provider_needs_separate_optin(monkeypatch):
     assert "Paid provider" in result.text
 
 
-@pytest.mark.asyncio
-async def test_openai_adapter_contract_mocked():
+def test_openai_adapter_contract_mocked():
+    asyncio.run(_openai_adapter_contract_mocked())
+
+
+async def _openai_adapter_contract_mocked():
     seen = {}
     def handler(request: httpx.Request) -> httpx.Response:
         seen["url"] = str(request.url)
@@ -106,8 +110,11 @@ async def test_openai_adapter_contract_mocked():
     assert seen["request"]["messages"][-1] == {"role": "user", "content": "User prompt"}
 
 
-@pytest.mark.asyncio
-async def test_openai_adapter_rejects_missing_usage():
+def test_openai_adapter_rejects_missing_usage():
+    asyncio.run(_openai_adapter_rejects_missing_usage())
+
+
+async def _openai_adapter_rejects_missing_usage():
     async with httpx.AsyncClient(transport=httpx.MockTransport(
         lambda request: httpx.Response(200, json={
             "choices": [{"message": {"content": "Answer"}}]}))) as mock:
