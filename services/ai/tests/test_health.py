@@ -8,7 +8,7 @@ def test_live_is_healthy():
     assert response.json() == {
         "status": "healthy",
         "service": "ai",
-        "phase": "Phase 0",
+        "phase": "Phase 3",
     }
 
 

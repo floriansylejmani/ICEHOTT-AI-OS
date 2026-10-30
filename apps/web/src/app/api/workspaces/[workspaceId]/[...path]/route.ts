@@ -9,6 +9,12 @@ async function route(request: NextRequest, { params }: Params,
   const { workspaceId, path } = await params;
   if (!guid.test(workspaceId) || !Array.isArray(path)) return new NextResponse(null, { status: 404 });
   const valid =
+    (path.length === 2 && path[0] === "ai" && path[1] === "conversations" && (method === "GET" || method === "POST")) ||
+    (path.length === 2 && path[0] === "ai" && path[1] === "usage" && method === "GET") ||
+    (path.length === 4 && path[0] === "ai" && path[1] === "conversations" &&
+      guid.test(path[2]) && path[3] === "messages" && method === "GET") ||
+    (path.length === 4 && path[0] === "ai" && path[1] === "conversations" &&
+      guid.test(path[2]) && path[3] === "send" && method === "POST") ||
     (path.length === 1 && path[0] === "overview" && method === "GET") ||
     (path.length === 1 && path[0] === "settings" && method === "PUT") ||
     (path.length === 1 && path[0] === "projects" && (method === "GET" || method === "POST")) ||

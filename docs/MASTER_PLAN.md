@@ -56,6 +56,13 @@ The checkboxes above were verified in local builds and GitHub Actions. **Phase 0
 - [x] Role-based authenticated HTTP integration tests, frontend accessibility/role tests, and real local HTTP/SMTP smoke test (see docs/PHASE2_WORKSPACE_UX.md).
 - [x] Phase 2 code acceptance; staged assistive-technology testing and live-service readiness are later release gates.
 
+## Phase 3 implementation progress
+- [x] AI Core: PostgreSQL conversations/messages, authenticated API, workspace-member authorizations, bounded history and typed Next.js AI Chat.
+- [x] Signed .NET → FastAPI runtime with strict HMAC authentication and explicit provider abstraction: offline demo default, gated optional HTTPS external adapter (no paid calls performed).
+- [x] Per-workspace daily request and reservation quotas, unique request ID, replay-safe returned answer, trace ID, completed/failed admission ledger, safe audit events.
+- [x] Provider contract/evaluation tests, tenant negative tests, malformed payload and rate/usage tests, full authenticated local HTTP/SMTP/demo smoke. See docs/PHASE3_AI_CORE.md.
+- [x] Phase 3 development acceptance. Provider-cost controls, multi-instance request replay defense, staging data retention and production launch remain separate Phase 8–12 release gates.
+
 ## Rules for every phase
 1. Protect data/credentials. No .env, tokens, live Stripe or provider keys in git.
 2. Every tenant-owned table requires WorkspaceId, database integrity and server-side member authorization.

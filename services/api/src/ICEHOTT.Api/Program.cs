@@ -18,6 +18,19 @@ builder.Services.AddHealthChecks();
 builder.Services.Configure<AuthSettings>(builder.Configuration.GetSection("Auth"));
 
 var auth = builder.Configuration.GetSection("Auth").Get<AuthSettings>() ?? new();
+var ai = builder.Configuration.GetSection("Ai").Get<AiCoreSettings>() ?? new();
+if (ai.Enabled)
+{
+    if (!auth.Enabled || System.Text.Encoding.UTF8.GetByteCount(ai.SharedSecret) < 32 ||
+        !Uri.TryCreate(ai.RuntimeUrl, UriKind.Absolute, out var aiUrl) ||
+        (builder.Environment.IsDevelopment() ? !(aiUrl.IsLoopback && aiUrl.Scheme == "http") :
+            aiUrl.Scheme != "https") ||
+        ai.DailyRequestLimit is < 1 or > 100 ||
+        ai.PerMinuteRequestLimit is < 1 or > 30 ||
+        ai.DailyTokenLimit is < 1000 or > 100000)
+        throw new InvalidOperationException("AI requires verified auth, an approved internal runtime URL, server secret and bounded quotas.");
+}
+builder.Services.Configure<AiCoreSettings>(builder.Configuration.GetSection("Ai"));
 if (auth.Enabled)
 {
     if (Encoding.UTF8.GetByteCount(auth.SigningKey) < 32 ||
@@ -38,6 +51,9 @@ if (auth.Enabled)
     builder.Services.AddScoped<WorkspaceAccessService>();
     builder.Services.AddScoped<WorkspaceMembershipService>();
     builder.Services.AddScoped<WorkspaceDashboardService>();
+    builder.Services.AddScoped<AiConversationService>();
+    builder.Services.AddHttpClient<IAiRuntime, HttpAiRuntime>(client =>
+        client.Timeout = TimeSpan.FromSeconds(20));
     builder.Services.Configure<PasswordHasherOptions>(options => options.IterationCount = 210_000);
     builder.Services.AddScoped<IPasswordHasher<UserAccount>, PasswordHasher<UserAccount>>();
     builder.Services.AddScoped<IAccountEmailSender, SmtpAccountEmailSender>();
@@ -96,6 +112,8 @@ app.UseExceptionHandler(handler => handler.Run(async ctx =>
     ctx.Response.StatusCode = exception switch
     {
         AuthRejectedException => StatusCodes.Status401Unauthorized,
+        AiQuotaException => StatusCodes.Status429TooManyRequests,
+        AiRuntimeUnavailableException => StatusCodes.Status503ServiceUnavailable,
         UnauthorizedAccessException => StatusCodes.Status403Forbidden,
         AuthConflictException or WorkspaceSlugAlreadyTakenException => StatusCodes.Status409Conflict,
         KeyNotFoundException => StatusCodes.Status404NotFound,
@@ -122,7 +140,7 @@ app.Use(async (ctx, next) =>
 app.MapHealthChecks("/health/live");
 app.MapGet("/api/system", () => Results.Ok(new
 {
-    product = "ICEHOTT AI OS", version = "0.3.0", phase = "Phase 2",
+    product = "ICEHOTT AI OS", version = "0.4.0", phase = "Phase 3",
     authEnabled = auth.Enabled
 }));
 
@@ -206,6 +224,29 @@ if (auth.Enabled)
         var record = await service.CreateAsync(CurrentUser(actor), request.Slug, request.Name, ct);
         return Results.Created($"/api/workspaces/{record.Id}", record);
     });
+    if (ai.Enabled)
+    {
+        workspaces.MapGet("/{workspaceId:guid}/ai/conversations", (
+            ClaimsPrincipal actor, Guid workspaceId, AiConversationService service, CancellationToken ct) =>
+            service.ListAsync(CurrentUser(actor), workspaceId, ct));
+        workspaces.MapPost("/{workspaceId:guid}/ai/conversations", async (
+            ClaimsPrincipal actor, Guid workspaceId, NewAiConversation request,
+            AiConversationService service, CancellationToken ct) =>
+        {
+            var conversation = await service.CreateAsync(CurrentUser(actor), workspaceId, request, ct);
+            return Results.Created($"/api/workspaces/{workspaceId}/ai/conversations/{conversation.Id}", conversation);
+        });
+        workspaces.MapGet("/{workspaceId:guid}/ai/usage", (
+            ClaimsPrincipal actor, Guid workspaceId, AiConversationService service, CancellationToken ct) =>
+            service.UsageAsync(CurrentUser(actor), workspaceId, ct));
+        workspaces.MapGet("/{workspaceId:guid}/ai/conversations/{conversationId:guid}/messages", (
+            ClaimsPrincipal actor, Guid workspaceId, Guid conversationId, AiConversationService service, CancellationToken ct) =>
+            service.MessagesAsync(CurrentUser(actor), workspaceId, conversationId, ct));
+        workspaces.MapPost("/{workspaceId:guid}/ai/conversations/{conversationId:guid}/send", (
+            ClaimsPrincipal actor, Guid workspaceId, Guid conversationId, AiSendRequest request,
+            AiConversationService service, CancellationToken ct) =>
+            service.SendAsync(CurrentUser(actor), workspaceId, conversationId, request, ct));
+    }
     workspaces.MapGet("/{workspaceId:guid}/overview", (
         ClaimsPrincipal actor, Guid workspaceId, WorkspaceDashboardService service, CancellationToken ct) =>
         service.OverviewAsync(CurrentUser(actor), workspaceId, ct));
